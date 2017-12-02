@@ -18,7 +18,7 @@ WebFontConfig = {
 
 var state = {
     preload: function() {
-        this.game.load.script('webfont', 'http://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
+        this.game.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
         this.load.image('redpixel', BASE_PATH + 'assets/redpixel.png?' + ASSET_VERSION, 800, 8);
         this.load.image('santa-idle', 'assets/santa-idle.png');
         this.load.image('gameover', 'assets/GameOverBild02.png');
