@@ -3,7 +3,8 @@ var GRAVITY = 1200;
 var JUMP = 580;
 var ASSET_VERSION = (new Date()).getTime();
 var BASE_PATH = '';
-var VELOCITY = 400;
+var VELOCITY = 380;
+var DISTANCE = 150;
 
 WebFontConfig = {
 
@@ -19,8 +20,16 @@ var state = {
     preload: function() {
         this.game.load.script('webfont', 'http://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
         this.load.image('redpixel', BASE_PATH + 'assets/redpixel.png?' + ASSET_VERSION, 800, 8);
-        this.load.image('player', 'assets/santa-player.png');
-
+        this.load.image('santa-idle', 'assets/santa-idle.png');
+        this.load.image('santa-jump1', 'assets/santa-jump01.png');
+        this.load.image('santa-jump2', 'assets/santa-jump02.png');
+        this.load.image('santa-jump3', 'assets/santa-jump03.png');
+        this.load.image('platform1', 'assets/present01.png');
+        this.load.image('platform2', 'assets/present02.png');
+        this.load.image('platform3', 'assets/present03.png');
+        this.load.image('platform4', 'assets/present04.png');
+        this.load.image('powerup', 'assets/squirrel.png');
+        this.load.image('ground', 'assets/ground01.png');
     },
 
     start: function() {
@@ -29,10 +38,12 @@ var state = {
         this.count = 0;
         this.countPowerUp = 0;
         this.score = 0;
+        this.currentJump = 0;
+        this.nextPowerUpScore = 500;
     },
 
     create: function() {
-        this.isGameOver = true;
+        this.isGameOver = false;
         this.isPlaying = false;
         
         // interface
@@ -60,6 +71,8 @@ var state = {
         this.floor.body.immovable = true;
 
         // Create all platforms
+        this.powerUps = this.add.group();
+
         this.platformsCreate();
 
         this.createPlayer();
@@ -98,13 +111,29 @@ var state = {
     },
 
     checkPowerUp: function() {
-        if (this.score / 500 > this.countPowerUp) {
+        if (this.score >= this.nextPowerUpScore) {
 
-            //TODO: 
             this.launchPowerUp();
 
-            this.countPowerUp++;
+            this.nextPowerUpScore = this.rnd.integerInRange(this.score + 600, this.score + 1400);
         }
+    },
+
+    displayJumpImage: function() {
+        this.currentJump++;
+        if (this.currentJump > 3) {
+            this.currentJump = 1;
+        }
+        this.player.loadTexture('santa-jump'+this.currentJump);
+    },
+
+    onPowerUpCollide: function(a, b) {
+        velocity = this.player.body.velocity.y - 800;
+        
+        this.player.body.velocity.y = Math.min(2000, this.player.body.velocity.y - 800);
+
+        this.game.camera.shake(0.02, 500);
+        b.kill();
     },
 
     update: function() {
@@ -114,15 +143,20 @@ var state = {
 
         this.scoreText.setText("SCORE: "+this.score);
         this.physics.arcade.collide(this.player, this.platforms, this.onCollide.bind(this));
+        this.physics.arcade.collide(this.player, this.powerUps, this.onPowerUpCollide.bind(this));
+
 
         if (!this.isPlaying) {
             if(this.isGameOver) {
-            
+                this.animateGameOver();
+
             } 
 
-            if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP) 
-                || this.game.input.activePointer.isDown
-            ) {
+            if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP)) {
+                if (this.isGameOver) {
+                    this.shutdown();
+                    this.create();
+                }
                 this.start();
             }
             return;
@@ -135,7 +169,7 @@ var state = {
 
         // the built in camera follow methods won't work for our needs
         // this is a custom follow style that will not ever move down, it only moves up
-        this.cameraYMin = Math.min( this.cameraYMin, this.player.y - this.game.height + 200 );
+        this.cameraYMin = Math.min( this.cameraYMin, this.player.y - this.game.height + 300 );
         this.camera.y = this.cameraYMin;
 
         // hero collisions and movement
@@ -148,11 +182,20 @@ var state = {
             this.platformYMin = Math.min( this.platformYMin, elem.y );
             if( elem.y > this.camera.y + this.game.height ) {
                 elem.kill();
-                this.platformsCreateOne( this.rnd.integerInRange( 0, this.world.width - 50 ), this.platformYMin - 100, 50 );
+                this.createPlatform( this.rnd.integerInRange( 0, this.world.width - 50 ), this.platformYMin - DISTANCE);
             }
         }, this );
 
-        this.lastVelocity = this.player.body.velocity.y;
+        this.rotatePowerUps();
+    },
+
+    rotatePowerUps: function() {
+        this.powerUps.forEachAlive(function(elem){
+            if( elem.y > this.camera.y + this.game.height ) {
+                elem.kill;
+            }
+            elem.angle += 2;
+        }.bind(this));
     },
 
     shutdown: function() {
@@ -163,6 +206,10 @@ var state = {
         this.player = null;
         this.platforms.destroy();
         this.platforms = null;
+        this.powerUps.destroy();
+        this.powerUps = null;
+        this.scoreText.destroy();
+        this.gameOverSceen.destroy();
     },
 
     getRandX() {
@@ -177,9 +224,14 @@ var state = {
         // Floor
         this.platformsCreateOne( -16, this.world.height - 16, this.world.width + 16 );
 
+        var ground = this.add.sprite(0, this.world.height - 100, 'ground');
+
+        ground.width = this.world.width;
+        ground.height = 70;
+
         // create a batch of platforms that start to move up the level
         for( var i = 0; i < 9; i++ ) {
-            this.platformsCreateOne( this.rnd.integerInRange( 0, this.world.width - 50 ), this.world.height - 100 - 100 * i, 50 );
+            this.createPlatform( this.rnd.integerInRange( 0, this.world.width - 50 ), this.world.height - DISTANCE - DISTANCE * i);
         }
     },
 
@@ -189,49 +241,100 @@ var state = {
         platform.scale.x = width;
         platform.scale.y = 16;
         platform.body.immovable = true;
+        this.game.debug.body(platform);
+
 
         return platform;
     },
 
-    createPowerUp: function() {
-        if (!this.powerUps) {
-            this.powerUps = this.add.group();
-        }
+    createPlatform: function(x, y) {
+        var platform = this.platforms.create(
+            x, y, 'platform' + this.rnd.integerInRange(1, 4)
+        );
+        platform.scale.x = 0.1
+        platform.scale.y = 0.1;
+        platform.body.immovable = true;
 
-        // basic hero setup
-        powerUp = game.add.sprite(this.getRandX(), 0, 'player');
+        return platform;
+    },
+
+
+    createPowerUp: function() {
+        var powerUp = this.powerUps.create(this.getRandX(), this.camera.y, 'powerup');
+        powerUp.width = 40;
+        powerUp.height = 40;
         //powerUp.anchor.set( 0.5 );
 
         this.physics.arcade.enable( powerUp );
         powerUp.body.gravity.y = 400;
-        //this.player.body.checkCollision.up = false;
-        //this.player.body.checkCollision.left = false;
-        //this.player.body.checkCollision.right = false;
+
+        this.player.body.checkCollision.right = false;
     },
 
     createPlayer: function() {
-        // basic hero setup
-        this.player = game.add.sprite(this.world.centerX, this.world.height - 66, 'player');
+        this.player = game.add.sprite(this.world.centerX, this.world.height - 66, 'santa-idle');
         this.player.anchor.set( 0.5 );
 
-        // track where the hero started and how much the distance has changed from that point
+        // track distance
         this.player.yOrig = this.player.y;
         this.player.yChange = 0;
 
-        // hero collision setup
-        // disable all collisions except for down
         this.physics.arcade.enable( this.player );
         this.player.body.gravity.y = 500;
         this.player.body.checkCollision.up = false;
         this.player.body.checkCollision.left = false;
         this.player.body.checkCollision.right = false;
+        this.player.width = 100;
+        this.player.height = 90;
     },
 
     playerJump: function() {
         if (this.isPlaying) {
-            this.player.body.velocity.y = -350;
+            this.player.body.velocity.y = -400;
+            this.isJumping = true;
+            this.displayJumpImage();
         }
     },
+
+    animateGameOver: function() {
+    },
+
+    displayGameOverScreen: function() {
+        this.gameOverSceen = this.add.group();
+
+        var text = this.add.text(
+            20,
+            this.camera.y + 300,
+            "GAME\nOVER!\nHAHA",
+            {
+                fill: '#ffdd00',
+            },
+            this.gameOverScreen
+        );
+
+        text.font = 'Revalia';
+        text.anchor.setTo(0, 0);
+        text.fontSize = 90;
+        text.fixedToCamera = true;
+        grd = text.context.createLinearGradient(0, 0, 0, text.canvas.height);
+        grd.addColorStop(0, '#ff0033');   
+        grd.addColorStop(1, '#44ff00');
+        text.fill = grd;
+        text.setShadow(-5, 5, 'rgba(0,0,0,0.5)', 0);
+
+
+        var gameover = this.gameOverSceen.create(this.world.centerX, this.camera.y + 800, 'santa-idle');
+        gameover.anchor.set( 0.5 );
+
+        this.physics.arcade.enable( gameover );
+        gameover.body.gravity.y = 500;
+        gameover.body.checkCollision.up = false;
+        gameover.body.checkCollision.left = false;
+        gameover.body.checkCollision.right = false;
+        gameover.body.checkCollision.right = false;
+    },
+
+    
 
     playerMove: function() {
         // handle the left and right movement of the hero
@@ -249,9 +352,11 @@ var state = {
         // track the maximum amount that the hero has travelled
         this.player.yChange = Math.max( this.player.yChange, Math.abs( this.player.y - this.player.yOrig ) );
 
+        // game over
         if( this.player.y > this.cameraYMin + this.game.height && this.player.alive ) {
             this.isGameOver = true;
             this.isPlaying = false;
+            this.displayGameOverScreen();
         }
     }
 };
