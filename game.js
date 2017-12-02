@@ -21,6 +21,7 @@ var state = {
         this.game.load.script('webfont', 'http://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
         this.load.image('redpixel', BASE_PATH + 'assets/redpixel.png?' + ASSET_VERSION, 800, 8);
         this.load.image('santa-idle', 'assets/santa-idle.png');
+        this.load.image('gameover', 'assets/GameOverBild02.png');
         this.load.image('background', 'assets/background03.png');
         this.load.image('santa-jump1', 'assets/santa-jump01.png');
         this.load.image('santa-jump2', 'assets/santa-jump02.png');
@@ -371,7 +372,7 @@ var state = {
         this.gameOverText = text;
 
 
-        var gameover = this.gameOverScreen.create(this.world.centerX, this.camera.y + 800, 'santa-idle');
+        var gameover = this.gameOverScreen.create(this.world.centerX, this.camera.y + 800, 'gameover');
         gameover.anchor.set( 0.5 );
 
         this.physics.arcade.enable( gameover );
