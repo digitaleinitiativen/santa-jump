@@ -21,6 +21,7 @@ var state = {
         this.game.load.script('webfont', 'http://ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
         this.load.image('redpixel', BASE_PATH + 'assets/redpixel.png?' + ASSET_VERSION, 800, 8);
         this.load.image('santa-idle', 'assets/santa-idle.png');
+        this.load.image('background', 'assets/background03.png');
         this.load.image('santa-jump1', 'assets/santa-jump01.png');
         this.load.image('santa-jump2', 'assets/santa-jump02.png');
         this.load.image('santa-jump3', 'assets/santa-jump03.png');
@@ -29,7 +30,7 @@ var state = {
         this.load.image('platform3', 'assets/present03.png');
         this.load.image('platform4', 'assets/present04.png');
         this.load.image('powerup', 'assets/squirrel.png');
-        this.load.image('ground', 'assets/ground01.png');
+        this.load.image('ground', 'assets/ground02.png');
     },
 
     start: function() {
@@ -42,7 +43,28 @@ var state = {
         this.nextPowerUpScore = 500;
     },
 
+    addBackground: function() {
+        var background = this.backgrounds.create(0, - 800 * this.backgroundCount , 'background');
+        background.alpha = 0.5;
+        this.backgroundCount++;
+    },
+
     create: function() {
+        this.backgroundCount = 0;
+        this.backgrounds = this.add.group();
+
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+        this.addBackground();
+
         this.isGameOver = false;
         this.isPlaying = false;
         
@@ -50,7 +72,7 @@ var state = {
         this.addScoreText();
 
         // Stage
-        this.stage.backgroundColor = '#6bf';
+        this.stage.backgroundColor = '#404389';
 
         // Scaling
         this.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -92,6 +114,14 @@ var state = {
         this.scoreText.font = 'Revalia';
         this.scoreText.anchor.setTo(0, 0);
         this.scoreText.fontSize = 24;
+        this.scoreText.fixedToCamera = true;
+
+        grd = this.scoreText.context.createLinearGradient(0, 0, 0, this.scoreText.canvas.height);
+        grd.addColorStop(0, '#ffdd00');   
+        grd.addColorStop(1, '#ff2211');
+        this.scoreText.fill = grd;
+
+        this.scoreText.setShadow(-3, 3, 'rgba(0,0,0,0.5)', 0);
         this.scoreText.fixedToCamera = true;
     },
 
@@ -137,9 +167,22 @@ var state = {
     },
 
     update: function() {
+
+        var bgCount = 0;
+     // this.backgrounds.forEachAlive( function( elem ) {
+     //     this.platformYMin = Math.min( this.platformYMin, elem.y );
+     //     if( elem.y > this.camera.y + this.game.height ) {
+     //         elem.kill();
+     //     }
+     // }, this );
+
         this.calculateScore();
         // check if a new powerup is launched
         this.checkPowerUp();
+
+        //this.background.cameraOffset = this.player.yChange;
+        //this.background.offsetY = this.player.yChange;
+        //this.background.tilePosition.y = this.player.yChange;
 
         this.scoreText.setText("SCORE: "+this.score);
         this.physics.arcade.collide(this.player, this.platforms, this.onCollide.bind(this));
@@ -149,7 +192,6 @@ var state = {
         if (!this.isPlaying) {
             if(this.isGameOver) {
                 this.animateGameOver();
-
             } 
 
             if(this.game.input.keyboard.isDown(Phaser.Keyboard.UP)) {
@@ -209,7 +251,7 @@ var state = {
         this.powerUps.destroy();
         this.powerUps = null;
         this.scoreText.destroy();
-        this.gameOverSceen.destroy();
+        this.gameOverScreen.destroy();
     },
 
     getRandX() {
@@ -224,10 +266,14 @@ var state = {
         // Floor
         this.platformsCreateOne( -16, this.world.height - 16, this.world.width + 16 );
 
-        var ground = this.add.sprite(0, this.world.height - 100, 'ground');
+        var width = this.world.width;
+        var ratio = 4.70;
+        var height = width / ratio;
 
-        ground.width = this.world.width;
-        ground.height = 70;
+        var ground = this.add.sprite(0, this.world.height - height, 'ground');
+
+        ground.width = width;
+        ground.height = height;
 
         // create a batch of platforms that start to move up the level
         for( var i = 0; i < 9; i++ ) {
@@ -300,11 +346,11 @@ var state = {
     },
 
     displayGameOverScreen: function() {
-        this.gameOverSceen = this.add.group();
+        this.gameOverScreen = this.add.group();
 
         var text = this.add.text(
             20,
-            this.camera.y + 300,
+            100,
             "GAME\nOVER!\nHAHA",
             {
                 fill: '#ffdd00',
@@ -321,19 +367,16 @@ var state = {
         grd.addColorStop(1, '#44ff00');
         text.fill = grd;
         text.setShadow(-5, 5, 'rgba(0,0,0,0.5)', 0);
+        text.fixedToCamera = true;
+        this.gameOverText = text;
 
 
-        var gameover = this.gameOverSceen.create(this.world.centerX, this.camera.y + 800, 'santa-idle');
+        var gameover = this.gameOverScreen.create(this.world.centerX, this.camera.y + 800, 'santa-idle');
         gameover.anchor.set( 0.5 );
 
         this.physics.arcade.enable( gameover );
         gameover.body.gravity.y = 500;
-        gameover.body.checkCollision.up = false;
-        gameover.body.checkCollision.left = false;
-        gameover.body.checkCollision.right = false;
-        gameover.body.checkCollision.right = false;
     },
-
     
 
     playerMove: function() {
